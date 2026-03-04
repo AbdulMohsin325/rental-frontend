@@ -2,6 +2,17 @@ import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { properties } from '../data/mockData';
 import { MapPin, BedDouble, Bath, SquareFunction, CheckCircle2, Navigation, MessageCircle, Home } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import toast from 'react-hot-toast';
+
+const tourSchema = z.object({
+    name: z.string().min(2, 'Name is required'),
+    email: z.string().email('Enter a valid email address'),
+    phone: z.string().min(10, 'Valid phone number is required'),
+    message: z.string().min(10, 'Please provide more details (at least 10 chars)'),
+});
 
 const PropertyDetails = () => {
     const { id } = useParams();
@@ -11,6 +22,20 @@ const PropertyDetails = () => {
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
+
+    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+        resolver: zodResolver(tourSchema),
+    });
+
+    const onSubmit = async (data) => {
+        try {
+            await new Promise(resolve => setTimeout(resolve, 800));
+            toast.success('Tour request sent successfully!');
+            reset();
+        } catch (error) {
+            toast.error('Failed to send request. Please try again.');
+        }
+    };
 
     if (!property) return (
         <div className="min-h-screen pt-24 pb-12 flex flex-col items-center justify-center bg-slate-50">
@@ -144,22 +169,48 @@ const PropertyDetails = () => {
                         <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 sm:p-8 sticky top-24">
                             <h3 className="text-xl font-bold text-slate-900 mb-6">Schedule a Tour</h3>
 
-                            <form className="space-y-4">
+                            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                                 <div>
-                                    <input type="text" placeholder="Your Name" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                                    <input
+                                        type="text"
+                                        placeholder="Your Name"
+                                        {...register('name')}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.name ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
+                                    />
+                                    {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
                                 </div>
                                 <div>
-                                    <input type="email" placeholder="Email Address" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                                    <input
+                                        type="email"
+                                        placeholder="Email Address"
+                                        {...register('email')}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.email ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
+                                    />
+                                    {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
                                 </div>
                                 <div>
-                                    <input type="tel" placeholder="Phone Number" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                                    <input
+                                        type="tel"
+                                        placeholder="Phone Number"
+                                        {...register('phone')}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.phone ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
+                                    />
+                                    {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
                                 </div>
                                 <div>
-                                    <textarea rows="4" placeholder="I'm interested in..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"></textarea>
+                                    <textarea
+                                        rows="4"
+                                        placeholder="I'm interested in..."
+                                        {...register('message')}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none ${errors.message ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}></textarea>
+                                    {errors.message && <p className="mt-1 text-xs text-red-600">{errors.message.message}</p>}
                                 </div>
 
-                                <button type="button" className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition-all duration-300 shadow-lg mt-4">
-                                    Request Information
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition-all duration-300 shadow-lg mt-4 disabled:opacity-70 disabled:cursor-not-allowed">
+                                    {isSubmitting ? 'Sending Request...' : 'Request Information'}
                                 </button>
                             </form>
                         </div>

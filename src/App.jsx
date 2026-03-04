@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -13,6 +14,7 @@ function App() {
 
   return (
     <div className="min-h-screen font-sans">
+      <Toaster position="top-right" />
       {!isAuthPage && <Navbar />}
 
       <Routes>

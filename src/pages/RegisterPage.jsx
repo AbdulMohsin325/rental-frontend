@@ -1,14 +1,71 @@
-import React from 'react';
-import { User, Mail, Lock, Home, ArrowRight } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { User, Mail, Lock, Home, ArrowRight, Phone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { registerUser } from '../services/user';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import toast from 'react-hot-toast';
+
+
+
+
+const registerSchema = z.object({
+    name: z.string().trim().min(2, 'Name must be at least 2 characters'),
+    email: z.string().trim().email('Enter a valid email address'),
+    phone: z
+        .string()
+        .trim()
+        .regex(/^[0-9+\-()\s]{10,16}$/, 'Enter a valid phone number'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+
 
 const RegisterPage = () => {
     const navigate = useNavigate();
+    const {
+        register,
+        handleSubmit,
+        setError,
+        formState: { errors, isSubmitting },
+    } = useForm({
+        defaultValues: {
+            name: '',
+            email: '',
+            phone: '',
+            password: '',
+        },
+        resolver: zodResolver(registerSchema),
+    });
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        navigate('/manage');
+    const onSubmit = async (formData) => {
+        try {
+
+            console.log(formData);
+           let res = await registerUser(formData);
+           console.log(res);
+            toast.success('Account created successfully!');
+            navigate('/manage');
+        } catch (error) {
+            toast.error(error.message || 'Unable to create account. Please try again.');
+            setError('root.serverError', {
+                type: 'server',
+                message: error.message || 'Unable to create account. Please try again.',
+            });
+        }
     };
+
+
+    useEffect(() => {
+        console.log(errors);
+
+    }, [errors])
+
+    const inputBaseClass =
+        'block w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200';
+    const getInputClass = (hasError) =>
+        `${inputBaseClass} ${hasError ? 'border-red-300 focus:ring-red-400' : 'border-slate-200 focus:ring-primary-500'}`;
 
     return (
         <div className="min-h-screen flex bg-slate-50">
@@ -26,7 +83,7 @@ const RegisterPage = () => {
                     <h2 className="text-4xl font-bold text-slate-900 mb-2">Create Account</h2>
                     <p className="text-slate-500 mb-8 text-lg">Join LuxeRentals and start managing your listings.</p>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
                             <div className="relative">
@@ -36,11 +93,12 @@ const RegisterPage = () => {
                                 <input
                                     type="text"
                                     autoComplete="name"
-                                    required
-                                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                                    {...register('name')}
+                                    className={getInputClass(Boolean(errors.name))}
                                     placeholder="Jane Doe"
                                 />
                             </div>
+                            {errors.name && <p className="mt-2 text-sm text-red-600">{errors.name.message}</p>}
                         </div>
 
                         <div>
@@ -52,11 +110,29 @@ const RegisterPage = () => {
                                 <input
                                     type="email"
                                     autoComplete="email"
-                                    required
-                                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                                    {...register('email')}
+                                    className={getInputClass(Boolean(errors.email))}
                                     placeholder="hello@example.com"
                                 />
                             </div>
+                            {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Phone Number</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Phone size={20} className="text-slate-400" />
+                                </div>
+                                <input
+                                    type="tel"
+                                    autoComplete="tel"
+                                    {...register('phone')}
+                                    className={getInputClass(Boolean(errors.phone))}
+                                    placeholder="(123) 456-7890"
+                                />
+                            </div>
+                            {errors.phone && <p className="mt-2 text-sm text-red-600">{errors.phone.message}</p>}
                         </div>
 
                         <div>
@@ -68,20 +144,26 @@ const RegisterPage = () => {
                                 <input
                                     type="password"
                                     autoComplete="new-password"
-                                    required
-                                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                                    {...register('password')}
+                                    className={getInputClass(Boolean(errors.password))}
                                     placeholder="••••••••"
                                 />
                             </div>
+                            {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>}
                         </div>
 
                         <button
                             type="submit"
-                            className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-primary-500/30 text-base font-semibold text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 transform hover:-translate-y-0.5"
+                            disabled={isSubmitting}
+                            className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-primary-500/30 text-base font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-70 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 transform hover:-translate-y-0.5"
                         >
-                            Create Account
+                            {isSubmitting ? 'Creating Account...' : 'Create Account'}
                             <ArrowRight size={18} />
                         </button>
+
+                        {errors.root?.serverError && (
+                            <p className="text-sm text-red-600 text-center">{errors.root.serverError.message}</p>
+                        )}
                     </form>
 
                     <p className="mt-8 text-center text-sm text-slate-600">

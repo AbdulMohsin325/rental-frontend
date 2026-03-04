@@ -1,13 +1,31 @@
 import React from 'react';
 import { Mail, Lock, Home, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import toast from 'react-hot-toast';
 
+const loginSchema = z.object({
+    email: z.string().email('Enter a valid email address'),
+    password: z.string().min(1, 'Password is required'),
+});
 const LoginPage = () => {
     const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        navigate('/manage');
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+        resolver: zodResolver(loginSchema)
+    });
+
+    const onSubmit = async (data) => {
+        try {
+            // Mock API call
+            await new Promise(resolve => setTimeout(resolve, 800));
+            toast.success('Successfully logged in!');
+            navigate('/manage');
+        } catch (error) {
+            toast.error('Failed to log in. Please check your credentials.');
+        }
     };
 
     return (
@@ -29,7 +47,7 @@ const LoginPage = () => {
                     <h2 className="text-4xl font-bold text-slate-900 mb-2">Welcome Back</h2>
                     <p className="text-slate-500 mb-8 text-lg">Sign in to manage your luxury property listings.</p>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
                             <div className="relative">
@@ -39,11 +57,12 @@ const LoginPage = () => {
                                 <input
                                     type="email"
                                     autoComplete="email"
-                                    required
-                                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                                    {...register('email')}
+                                    className={`block w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${errors.email ? 'border-red-300 focus:ring-red-400' : 'border-slate-200 focus:ring-primary-500'}`}
                                     placeholder="hello@example.com"
                                 />
                             </div>
+                            {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>}
                         </div>
 
                         <div>
@@ -59,11 +78,13 @@ const LoginPage = () => {
                                 </div>
                                 <input
                                     type="password"
-                                    required
-                                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                                    autoComplete="current-password"
+                                    {...register('password')}
+                                    className={`block w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${errors.password ? 'border-red-300 focus:ring-red-400' : 'border-slate-200 focus:ring-primary-500'}`}
                                     placeholder="••••••••"
                                 />
                             </div>
+                            {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>}
                         </div>
 
                         <div className="flex items-center">
@@ -79,9 +100,10 @@ const LoginPage = () => {
 
                         <button
                             type="submit"
-                            className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-primary-500/30 text-base font-semibold text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 transform hover:-translate-y-0.5"
+                            disabled={isSubmitting}
+                            className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-primary-500/30 text-base font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-70 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300 transform hover:-translate-y-0.5"
                         >
-                            Sign In
+                            {isSubmitting ? 'Signing In...' : 'Sign In'}
                             <ArrowRight size={18} />
                         </button>
                     </form>
