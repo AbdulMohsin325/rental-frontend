@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import { getMe, loginUser } from '../services/auth';
+import { useUser } from '../context/UserContext';
 
 const loginSchema = z.object({
     email: z.string().email('Enter a valid email address'),
@@ -17,14 +19,20 @@ const LoginPage = () => {
         resolver: zodResolver(loginSchema)
     });
 
+    const { refreshUserDetails } = useUser();
+
     const onSubmit = async (data) => {
         try {
-            // Mock API call
-            await new Promise(resolve => setTimeout(resolve, 800));
-            toast.success('Successfully logged in!');
-            navigate('/manage');
+            let res = await loginUser(data);
+            if (res.status) {
+                await refreshUserDetails();
+                toast.success('Successfully logged in!');
+                setTimeout(() => navigate('/'), 100);
+            } else {
+                toast.error(res.error || 'Failed to log in. Please check your credentials.');
+            }
         } catch (error) {
-            toast.error('Failed to log in. Please check your credentials.');
+            toast.error(error.message || 'Failed to log in. Please check your credentials.');
         }
     };
 
@@ -114,6 +122,11 @@ const LoginPage = () => {
                             Create an account
                         </Link>
                     </p>
+                    <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-center">
+                        <Link to="/admin/login" className="text-sm font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                            Administrator Sign In
+                        </Link>
+                    </div>
                 </div>
             </div>
 
@@ -122,7 +135,7 @@ const LoginPage = () => {
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/90 z-10 mix-blend-multiply"></div>
                 <img
                     className="absolute inset-0 w-full h-full object-cover"
-                    src="https://images.unsplash.com/photo-1627329598282-3e74dd566580?w=1200&auto=format&fit=crop&q=80"
+                    src="https://res.cloudinary.com/dut3ffbcv/image/upload/v1772619483/images_skwomp.jpg"
                     alt="Luxury living space"
                 />
 
@@ -136,9 +149,7 @@ const LoginPage = () => {
                 </div>
 
                 <div className="absolute bottom-16 left-16 right-16 z-20 text-white animate-slide-up">
-                    <div className="inline-block px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-sm font-medium border border-white/30 mb-6">
-                        Agent Portal
-                    </div>
+
                     <h3 className="text-4xl font-bold leading-tight mb-4 drop-shadow-lg text-balance">
                         Manage your premium properties with ease.
                     </h3>
@@ -146,7 +157,7 @@ const LoginPage = () => {
                         Access your dashboard to track listings, manage inquiries, and oversee your entire luxury portfolio in one beautiful interface.
                     </p>
 
-                    <div className="flex items-center gap-4">
+                    {/* <div className="flex items-center gap-4">
                         <div className="flex -space-x-4">
                             <img className="w-12 h-12 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop" alt="User" />
                             <img className="w-12 h-12 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop" alt="User" />
@@ -155,7 +166,7 @@ const LoginPage = () => {
                         <div className="text-sm font-medium">
                             Trusted by 2,000+ top agents
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </div>
 

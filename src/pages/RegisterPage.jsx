@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { User, Mail, Lock, Home, ArrowRight, Phone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { registerUser } from '../services/user';
+import { registerUser } from '../services/auth';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
@@ -41,21 +41,20 @@ const RegisterPage = () => {
 
     const onSubmit = async (formData) => {
         try {
-
             console.log(formData);
-           let res = await registerUser(formData);
-           console.log(res);
-            toast.success('Account created successfully!');
-            navigate('/manage');
+            let res = await registerUser(formData);
+            console.log(res);
+            if (res.status) {
+                toast.success('Account created successfully!');
+                navigate('/login');
+            }
+            else {
+                toast.error(res.error || 'Unable to create account. Please try again.');
+            }
         } catch (error) {
             toast.error(error.message || 'Unable to create account. Please try again.');
-            setError('root.serverError', {
-                type: 'server',
-                message: error.message || 'Unable to create account. Please try again.',
-            });
         }
     };
-
 
     useEffect(() => {
         console.log(errors);
@@ -160,10 +159,6 @@ const RegisterPage = () => {
                             {isSubmitting ? 'Creating Account...' : 'Create Account'}
                             <ArrowRight size={18} />
                         </button>
-
-                        {errors.root?.serverError && (
-                            <p className="text-sm text-red-600 text-center">{errors.root.serverError.message}</p>
-                        )}
                     </form>
 
                     <p className="mt-8 text-center text-sm text-slate-600">

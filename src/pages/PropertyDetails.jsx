@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { properties } from '../data/mockData';
+import { getAllProperties } from '../services/propertyStore';
 import { MapPin, BedDouble, Bath, SquareFunction, CheckCircle2, Navigation, MessageCircle, Home } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +16,13 @@ const tourSchema = z.object({
 
 const PropertyDetails = () => {
     const { id } = useParams();
-    const property = properties.find(p => p.id === parseInt(id));
+    const [property, setProperty] = useState(null);
+
+    useEffect(() => {
+        const allProperties = getAllProperties();
+        const match = allProperties.find((p) => p.id === Number(id));
+        setProperty(match || null);
+    }, [id]);
 
     // Scroll to top on load
     useEffect(() => {

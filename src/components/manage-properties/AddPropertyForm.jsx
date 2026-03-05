@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import { addProperty } from '../../services/propertyStore';
 
 const propertySchema = z.object({
     title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -36,7 +37,20 @@ const AddPropertyForm = ({
 
         try {
             await new Promise(resolve => setTimeout(resolve, 800)); // Mock API delay
-            toast.success('Property published successfully!');
+            const newPropertyData = {
+                title: data.title,
+                location: data.location,
+                price: Number(data.price),
+                bedrooms: Number(data.bedrooms),
+                bathrooms: Number(data.bathrooms),
+                sqft: Number(data.sqft),
+                description: data.description,
+                imageUrl: imageUrl,
+                amenities: ["Newly Listed"] // Default mock amenity
+            };
+
+            addProperty(newPropertyData);
+            toast.success('Property submitted for admin approval!');
             onCancel(); // Use existing prop convention to switch back to list
         } catch (error) {
             toast.error('Failed to publish property');

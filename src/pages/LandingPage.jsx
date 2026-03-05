@@ -1,9 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import PropertyCard from '../components/PropertyCard';
-import { properties } from '../data/mockData';
+import { getApprovedProperties } from '../services/propertyStore';
 import { Search, MapPin, Home } from 'lucide-react';
+import { getIsAuthenticated, getMe } from '../services/auth';
 
 const LandingPage = () => {
+    const [approvedProperties, setApprovedProperties] = useState([]);
+    useEffect(() => {
+        if (!getIsAuthenticated()) return;
+        getMe().catch(() => { });
+    }, []);
+
+    useEffect(() => {
+        setApprovedProperties(getApprovedProperties());
+    }, []);
+
+    const featured = approvedProperties.filter(p => p.featured);
+
     return (
         <div className="min-h-screen pt-16">
             {/* Hero Section */}
@@ -58,7 +71,7 @@ const LandingPage = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {properties.filter(p => p.featured).map(property => (
+                        {featured.map(property => (
                             <PropertyCard key={property.id} property={property} />
                         ))}
                     </div>
@@ -74,7 +87,7 @@ const LandingPage = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {properties.map(property => (
+                        {approvedProperties.map(property => (
                             <PropertyCard key={property.id} property={property} />
                         ))}
                     </div>
