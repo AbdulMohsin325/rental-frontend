@@ -10,6 +10,7 @@ import AdminLoginPage from './pages/AdminLoginPage'
 import AdminDashboard from './pages/AdminDashboard'
 import ProfilePage from './pages/ProfilePage'
 import ManageProperties from './pages/ManageProperties'
+import MyTripsPage from './pages/MyTripsPage'
 import ProtectedRoute from './routes/ProtectedRoute'
 import AdminRoute from './routes/AdminRoute'
 
@@ -53,6 +54,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ManageProperties />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trips"
+          element={
+            <ProtectedRoute>
+              <MyTripsPage />
             </ProtectedRoute>
           }
         />

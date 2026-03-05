@@ -116,6 +116,17 @@ const Navbar = () => {
                                             Profile
                                         </button>
 
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                navigate('/trips');
+                                                setIsMenuOpen(false);
+                                            }}
+                                            className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700"
+                                        >
+                                            My Trips
+                                        </button>
+
                                         {isAdmin && (
                                             <button
                                                 type="button"
