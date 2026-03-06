@@ -2,6 +2,11 @@ import React from 'react';
 import { Edit, Trash2 } from 'lucide-react';
 
 const PropertyListingsTable = ({ properties, onEdit }) => {
+
+
+    // useEffect(() => {
+    //     console.log("Properties in table:", properties);
+    // }, [properties]);
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in">
             <div className="overflow-x-auto">
@@ -16,8 +21,11 @@ const PropertyListingsTable = ({ properties, onEdit }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {properties.map((property) => (
-                            <tr key={property.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
+                        {/* {(properties || []).map((property, index) => (
+                            <tr key={property?.id || property?._id || index} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group"> */}
+                        {properties.map((property, index) => (
+                            <tr key={property?.homeId || property?._id || property?.id || index} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
+                                
                                 <td className="p-4">
                                     <div className="flex items-center gap-4">
                                         <img src={property.imageUrl} alt={property.title} className="w-16 h-16 rounded-xl object-cover shadow-sm" />
@@ -32,18 +40,18 @@ const PropertyListingsTable = ({ properties, onEdit }) => {
                                     ${property.price.toLocaleString()}<span className="text-xs text-slate-500 font-normal">/mo</span>
                                 </td>
                                 <td className="p-4">
-                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${property.status === 'pending'
+                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${property.approvalStatus === 'Pending'
                                             ? 'bg-yellow-100 text-yellow-700'
-                                            : property.status === 'rejected'
+                                            : property.approvalStatus === 'Rejected'
                                                 ? 'bg-red-100 text-red-700'
                                                 : 'bg-green-100 text-green-700'
                                         }`}>
-                                        {property.status === 'pending' ? 'Pending Approval' : property.status === 'rejected' ? 'Rejected' : 'Active'}
+                                        {property.approvalStatus === 'Pending' ? 'Pending Approval' : property.approvalStatus === 'Rejected' ? 'Rejected' : 'Active'}
                                     </span>
                                 </td>
                                 <td className="p-4 text-right">
                                     <div className="flex items-center justify-end gap-2 text-slate-400">
-                                        <button onClick={onEdit} className="p-2 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="Edit Property">
+                                        <button onClick={() => onEdit(property)} className="p-2 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="Edit Property">
                                             <Edit size={18} />
                                         </button>
                                         <button className="p-2 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Property">
