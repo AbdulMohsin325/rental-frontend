@@ -11,6 +11,7 @@ const ManagePropertiesSection = () => {
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [imageUploadError, setImageUploadError] = useState('');
     const [activeProperties, setActiveProperties] = useState([]);
+    const [editingProperty, setEditingProperty] = useState(null);
 
     useEffect(() => {
         if (activeTab === 'list') {
@@ -54,6 +55,18 @@ const ManagePropertiesSection = () => {
         setImages(prev => prev.filter(img => img !== url));
     };
 
+    const handleEdit = (property) => {
+        setEditingProperty(property);
+        setImages(property.images || []);
+        setActiveTab('add');
+    };
+
+    const handleCancel = () => {
+        setEditingProperty(null);
+        setImages([]);
+        setActiveTab('list');
+    };
+
 
     
 
@@ -62,15 +75,17 @@ const ManagePropertiesSection = () => {
             <ManagePropertiesHeader activeTab={activeTab} onTabChange={setActiveTab} />
 
             {activeTab === 'list' ? (
-                <PropertyListingsTable properties={activeProperties} onEdit={() => setActiveTab('add')} />
+                <PropertyListingsTable properties={activeProperties} onEdit={handleEdit} />
             ) : (
                 <AddPropertyForm
                     images={images}
                     isUploadingImage={isUploadingImage}
                     imageUploadError={imageUploadError}
-                    onCancel={() => setActiveTab('list')}
+                    onCancel={handleCancel}
                     onImageSelect={handleImageSelect}
                     onImageRemove={handleImageRemove}
+                    onImagesChange={setImages}
+                    editingProperty={editingProperty}
                 />
             )}
         </>

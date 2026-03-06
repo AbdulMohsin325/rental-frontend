@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { uploadImageToCloudinary } from "../../services/cloudinary";
-import { Home, DollarSign, MapPin, Image as ImageIcon } from "lucide-react";
+import { Home, DollarSign, MapPin } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import { addProperty } from "../../services/propertyStore";
+import { addProperty, getPropertyById, updateProperty } from "../../services/propertyStore";
 
 const propertySchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -21,7 +21,9 @@ const propertySchema = z.object({
   bathrooms: z.coerce.number().positive("Bathrooms must be positive"),
   sqft: z.coerce.number().positive("Square feet must be positive"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  type: z.enum(["Apartment", "House", "flat"], "Select a valid property type"),
+  type: z.enum(["Apartment", "House", "flat"], {
+    message: "Select a valid property type",
+  }),
   isFurnished: z.preprocess(
     (value) => value === "true" || value === true,
     z.boolean()
@@ -32,21 +34,21 @@ const propertySchema = z.object({
 });
 
 let defaultValues = {
-  title: "test",
+  title: "",
   address: {
-    street: "testt",
-    city: "test",
-    state: "test",
-    zipCode: "12345",
-    country: "test",
+    street: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
   },
-  price: "3000",
-  bedrooms: "2",
-  bathrooms: "2",
-  sqft: "1000",
-  description: "Test property description",
+  price: "",
+  bedrooms: "",
+  bathrooms: "",
+  sqft: "",
+  description: "",
   type: "Apartment",
-  isFurnished: true,
+  isFurnished: "true",
   images: [],
   amenities: [],
   thumbnail: "",
@@ -64,6 +66,24 @@ const amenitiesOptions = [
   "Furnished",
 ];
 
+const normalizeAmenities = (amenitiesValue) => {
+  if (Array.isArray(amenitiesValue)) {
+    return amenitiesValue.filter(Boolean);
+  }
+
+  if (typeof amenitiesValue === "string") {
+    return amenitiesValue
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const toBoolean = (value) =>
+  value === true || value === "true" || value === 1 || value === "1";
+
 const AddPropertyForm = ({
   images = [],
   isUploadingImage,
@@ -71,6 +91,8 @@ const AddPropertyForm = ({
   onCancel,
   onImageSelect,
   onImageRemove,
+  onImagesChange,
+  editingProperty = null,
 }) => {
   // Thumbnail uploader state
   const [thumbnailUrl, setThumbnailUrl] = useState("");
@@ -88,6 +110,7 @@ const AddPropertyForm = ({
       setThumbnailUploadError("");
       const uploadedUrl = await uploadImageToCloudinary(file);
       setThumbnailUrl(uploadedUrl);
+      setValue("thumbnail", uploadedUrl);
     } catch (error) {
       setThumbnailUploadError(error.message || "Failed to upload thumbnail.");
     } finally {
@@ -99,14 +122,61 @@ const AddPropertyForm = ({
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm({
     defaultValues,
     resolver: zodResolver(propertySchema),
   });
 
+  const resolvePropertyId = (property) =>
+    property?.homeId || property?._id || property?.id;
+
+
+  const fetchPropertyDetails = useCallback(async (propertyId) => {
+    try {
+      const response = await getPropertyById(propertyId);
+      if (response.status) {
+        const property = response.data;
+        const propertyImages = property.images || [];
+        const normalizedAmenities = normalizeAmenities(property.amenities);
+        reset({data :response.data});
+        setValue("images", propertyImages);
+        onImagesChange?.(propertyImages);
+        setThumbnailUrl(property.thumbnail || "");
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to fetch property details");
+    }
+  }, [onImagesChange, reset, setValue]);  
+
+  useEffect(() => {
+    if (!editingProperty) {
+      reset(defaultValues);
+      setThumbnailUrl("");
+      setSelectedThumbnailFile(null);
+      setThumbnailUploadError("");
+      onImagesChange?.([]);
+      return;
+    }
+
+    const propertyId = resolvePropertyId(editingProperty);
+    if (!propertyId) {
+      toast.error("Unable to identify property for editing");
+      return;
+    }
+
+    fetchPropertyDetails(propertyId);
+    setThumbnailUrl(editingProperty.thumbnail || "");
+  }, [editingProperty, fetchPropertyDetails, onImagesChange, reset]);
+
+
+  
+
   const [isAmenitiesDropdownOpen, setIsAmenitiesDropdownOpen] = useState(false);
-  const selectedAmenities = watch("amenities") || [];
+  const selectedAmenities = normalizeAmenities(watch("amenities"));
 
   const toggleAmenity = (amenity) => {
     const updatedAmenities = selectedAmenities.includes(amenity)
@@ -120,7 +190,9 @@ const AddPropertyForm = ({
   };
 
   const onSubmit = async (data) => {
-    if (!images.length) {
+    const finalImages = images.length ? images : data.images || [];
+
+    if (!finalImages.length) {
       toast.error("Please upload at least one property image");
       return;
     }
@@ -129,62 +201,40 @@ const AddPropertyForm = ({
       return;
     }
     try {
-      // Mock API delay
-      //   const location = [
-      //     data.address.street,
-      //     data.address.city,
-      //     data.address.state,
-      //     data.address.country,
-      //   ]
-      // .filter(Boolean)
-      // .join(", ");
+      const propertyData = {
+        ...data,
+        isFurnished: toBoolean(data.isFurnished),
+        amenities: normalizeAmenities(data.amenities),
+        images: finalImages,
+        thumbnail: thumbnailUrl,
+      };
 
-      //   const newPropertyData = {
-      //     title: data.title,
-      //     address: location,
-      //     type: data.type,
-      //     isFurnished: data.isFurnished,
-      //     address: {
-      //       street: data.address.street,
-      //       city: data.address.city,
-      //       state: data.address.state,
-      //       zipCode: data.address.zipCode,
-      //       country: data.address.country,
-      //     },
-      //     price: Number(data.price),
-      //     bedrooms: Number(data.bedrooms),
-      //     bathrooms: Number(data.bathrooms),
-      //     sqft: Number(data.sqft),
-      //     description: data.description,
-      //     images: images,
-      //     thumbnail: thumbnailUrl,
-      //     amenities: data.amenities?.length
-      //       ? data.amenities
-      //       : ["Newly Listed"],
-      //   };
-
-
-      let response = await addProperty(data);
+      let response;
+      if (editingProperty) {
+        response = await updateProperty(resolvePropertyId(editingProperty), propertyData);
+      } else {
+        response = await addProperty(propertyData);
+      }
+      
       if (response.status) {
-        toast.success("Property submitted for admin approval!");
+        toast.success(editingProperty ? "Property updated successfully!" : "Property submitted for admin approval!");
         onCancel();
       } else {
         toast.error(response.message);
       }
     } catch (error) {
-      toast.error(error.message, "Failed to publish property");
+      toast.error(error.message || "Failed to publish property");
     }
   };
-  const values = watch();
 
   useEffect(() => {
-    console.log(errors, "errrors");
-  }, [errors]);
+    setValue("images", images);
+  }, [images, setValue]);
 
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 sm:p-10 max-w-4xl animate-slide-up">
       <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-4 border-b border-slate-100">
-        Add New Property Listing
+        {editingProperty ? 'Edit Property Listing' : 'Add New Property Listing'}
       </h2>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -313,9 +363,7 @@ const AddPropertyForm = ({
                 <input
                   type="radio"
                   value="true"
-                  {...register("isFurnished", {
-                    setValueAs: (v) => v === "true",
-                  })}
+                  {...register("isFurnished")}
                   className="peer sr-only"
                 />
                 <span className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all peer-checked:bg-primary-600 peer-checked:text-white peer-checked:shadow-sm">
@@ -326,9 +374,7 @@ const AddPropertyForm = ({
                 <input
                   type="radio"
                   value="false"
-                  {...register("isFurnished", {
-                    setValueAs: (v) => v === "true",
-                  })}
+                  {...register("isFurnished")}
                   className="peer sr-only"
                 />
                 <span className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all peer-checked:bg-primary-600 peer-checked:text-white peer-checked:shadow-sm">
@@ -573,7 +619,7 @@ const AddPropertyForm = ({
             disabled={isSubmitting}
             className="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl shadow-lg shadow-primary-500/30 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Publishing..." : "Publish Listing"}
+            {isSubmitting ? (editingProperty ? "Updating..." : "Publishing...") : (editingProperty ? "Update Listing" : "Publish Listing")}
           </button>
         </div>
       </form>

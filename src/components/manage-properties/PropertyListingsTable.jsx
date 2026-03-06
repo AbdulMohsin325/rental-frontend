@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Edit, Trash2 } from 'lucide-react';
 
 const PropertyListingsTable = ({ properties, onEdit }) => {
@@ -21,8 +21,11 @@ const PropertyListingsTable = ({ properties, onEdit }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {properties.map((property) => (
-                            <tr key={property.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
+                        {/* {(properties || []).map((property, index) => (
+                            <tr key={property?.id || property?._id || index} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group"> */}
+                        {properties.map((property, index) => (
+                            <tr key={property?.homeId || property?._id || property?.id || index} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
+                                
                                 <td className="p-4">
                                     <div className="flex items-center gap-4">
                                         <img src={property.imageUrl} alt={property.title} className="w-16 h-16 rounded-xl object-cover shadow-sm" />
@@ -48,7 +51,7 @@ const PropertyListingsTable = ({ properties, onEdit }) => {
                                 </td>
                                 <td className="p-4 text-right">
                                     <div className="flex items-center justify-end gap-2 text-slate-400">
-                                        <button onClick={onEdit} className="p-2 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="Edit Property">
+                                        <button onClick={() => onEdit(property)} className="p-2 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="Edit Property">
                                             <Edit size={18} />
                                         </button>
                                         <button className="p-2 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Property">

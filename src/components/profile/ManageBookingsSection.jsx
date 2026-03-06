@@ -14,10 +14,22 @@ const ManageBookingsSection = () => {
         loadData();
     }, []);
 
-    const loadData = () => {
-        // Assume ownerId = 1 for the mock agent
-        setBookings(getReceivedBookings(1));
-        setProperties(getAllProperties());
+    const loadData = async () => {
+        try {
+            // Assume ownerId = 1 for the mock agent
+            setBookings(getReceivedBookings(1));
+
+            const response = await getAllProperties();
+            if (response?.status && Array.isArray(response.data)) {
+                setProperties(response.data);
+                return;
+            }
+
+            setProperties([]);
+        } catch (error) {
+            setProperties([]);
+            toast.error(error?.message || 'Failed to load properties.');
+        }
     };
 
     const handleCancelBooking = (bookingId) => {
@@ -43,6 +55,7 @@ const ManageBookingsSection = () => {
     };
 
     const getPropertyDetails = (propertyId) => {
+        if (!Array.isArray(properties)) return null;
         return properties.find(p => p.id === propertyId) || null;
     };
 
