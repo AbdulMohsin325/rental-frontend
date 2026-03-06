@@ -140,7 +140,11 @@ const AddPropertyForm = ({
         const property = response.data;
         const propertyImages = property.images || [];
         const normalizedAmenities = normalizeAmenities(property.amenities);
-        reset({data :response.data});
+        reset({
+          ...property,
+          amenities: normalizedAmenities,
+          isFurnished: property.isFurnished ? "true" : "false",
+        });
         setValue("images", propertyImages);
         onImagesChange?.(propertyImages);
         setThumbnailUrl(property.thumbnail || "");
@@ -150,7 +154,7 @@ const AddPropertyForm = ({
     } catch (error) {
       toast.error(error.message || "Failed to fetch property details");
     }
-  }, [onImagesChange, reset, setValue]);  
+  }, [onImagesChange, reset, setValue]);
 
   useEffect(() => {
     if (!editingProperty) {
@@ -173,7 +177,7 @@ const AddPropertyForm = ({
   }, [editingProperty, fetchPropertyDetails, onImagesChange, reset]);
 
 
-  
+
 
   const [isAmenitiesDropdownOpen, setIsAmenitiesDropdownOpen] = useState(false);
   const selectedAmenities = normalizeAmenities(watch("amenities"));
@@ -215,7 +219,7 @@ const AddPropertyForm = ({
       } else {
         response = await addProperty(propertyData);
       }
-      
+
       if (response.status) {
         toast.success(editingProperty ? "Property updated successfully!" : "Property submitted for admin approval!");
         onCancel();

@@ -15,9 +15,12 @@ const MyTripsPage = () => {
         loadData();
     }, []);
 
-    const loadData = () => {
+    const loadData = async () => {
         // Assume userId = 1 for the mock renter
-        setBookings(getUserBookings(1));
+        let res = await getUserBookings(1);
+        if (res?.status && Array.isArray(res.data)) {
+            setBookings(res.data);
+        }
         setProperties(getAllProperties());
     };
 

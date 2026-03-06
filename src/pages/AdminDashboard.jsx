@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getAllProperties, updatePropertyStatus } from '../services/propertyStore';
+import { getProperties, updatePropertyStatus } from '../services/propertyStore';
 import { CheckCircle, XCircle, ShieldAlert, Users, UserCog, UserPlus, User, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser, getIsAdmin } from '../services/auth';
@@ -10,6 +10,10 @@ import { useUser } from '../context/UserContext';
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('properties');
     const [properties, setProperties] = useState([]);
+    const [propertiesPage, setPropertiesPage] = useState(1);
+    const [propertiesTotalPages, setPropertiesTotalPages] = useState(1);
+    const [isLoadingProperties, setIsLoadingProperties] = useState(false);
+
     const [users, setUsers] = useState([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
@@ -20,9 +24,22 @@ const AdminDashboard = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef(null);
 
+    const loadProperties = async (pageNum = propertiesPage) => {
+        setIsLoadingProperties(true);
+        const response = await getProperties(pageNum, 10);
+        if (response.status && response.data) {
+            setProperties(response.data);
+            setPropertiesPage(pageNum);
+            setPropertiesTotalPages(response.totalPages || Math.ceil((response.total || 0) / 10));
+        } else {
+            setProperties([]);
+        }
+        setIsLoadingProperties(false);
+    };
+
     useEffect(() => {
         if (activeTab === 'properties') {
-            setProperties(getAllProperties());
+            loadProperties(1);
         }
     }, [activeTab]);
 
@@ -41,16 +58,32 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleApprove = (id) => {
-        updatePropertyStatus(id, 'approved');
-        setProperties(getAllProperties());
-        toast.success('Property approved successfully.');
+    const handleApprove = async (id) => {
+        try {
+            const res = await updatePropertyStatus(id, 'Approved');
+            if (res.status) {
+                toast.success(res.message);
+                await loadProperties();
+            } else {
+                toast.error(res.message);
+            }
+        } catch (error) {
+            toast.error('Failed to approve property.');
+        }
     };
 
-    const handleReject = (id) => {
-        updatePropertyStatus(id, 'rejected');
-        setProperties(getAllProperties());
-        toast.error('Property rejected.');
+    const handleReject = async (id) => {
+        try {
+            const res = await updatePropertyStatus(id, 'Rejected');
+            if (res.status) {
+                toast.error(res.message || 'Property rejected.');
+                await loadProperties();
+            } else {
+                toast.error(res.message);
+            }
+        } catch (error) {
+            toast.error('Failed to reject property.');
+        }
     };
 
     const handleLogout = async () => {
@@ -65,7 +98,7 @@ const AdminDashboard = () => {
         }
     };
 
-    const pendingCount = properties.filter(p => p.status === 'pending').length;
+
 
     const handleSelectUser = (user) => {
         setSelectedUser(user);
@@ -265,14 +298,14 @@ const AdminDashboard = () => {
                             </div>
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-green-500">
                                 <p className="text-sm font-medium text-slate-500 mb-1">Active / Approved</p>
-                                <h3 className="text-3xl font-bold text-slate-900">{properties.filter(p => p.status === 'approved').length}</h3>
+                                <h3 className="text-3xl font-bold text-slate-900">{properties.filter(p => p.approvalStatus === 'Approved').length}</h3>
                             </div>
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-yellow-500">
                                 <p className="text-sm font-medium text-slate-500 mb-1">Pending Approval</p>
                                 <h3 className="text-3xl font-bold text-slate-900">
-                                    {pendingCount > 0 ? (
+                                    {properties.filter(p => p.approvalStatus === 'Pending').length > 0 ? (
                                         <span className="flex items-center gap-2">
-                                            {pendingCount}
+                                            {properties.filter(p => p.approvalStatus === 'Pending').length}
                                             <span className="inline-flex h-3 w-3 rounded-full bg-yellow-400 animate-pulse"></span>
                                         </span>
                                     ) : 0}
@@ -292,6 +325,7 @@ const AdminDashboard = () => {
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
                                             <th className="p-4 font-semibold">ID / Listing</th>
+                                            <th className="p-4 font-semibold">Owner</th>
                                             <th className="p-4 font-semibold">Location</th>
                                             <th className="p-4 font-semibold">Price</th>
                                             <th className="p-4 font-semibold">Status</th>
@@ -303,40 +337,41 @@ const AdminDashboard = () => {
                                             <tr key={property.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-4">
-                                                        <img src={property.imageUrl} alt={property.title} className="w-12 h-12 rounded-lg object-cover shadow-sm border border-slate-200" />
+                                                        <img src={property.thumbnail} alt={property.title} className="w-12 h-12 rounded-lg object-cover shadow-sm border border-slate-200" />
                                                         <div>
-                                                            <div className="text-xs text-slate-400 mb-0.5">#{property.id}</div>
+                                                            <div className="text-xs text-slate-400 mb-0.5">#{property.homeId}</div>
                                                             <div className="font-semibold text-slate-900">{property.title}</div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="p-4 text-sm text-slate-600">{property.location}</td>
+                                                <td className="p-4 text-sm text-slate-600">{property.owner}</td>
+                                                <td className="p-4 text-sm text-slate-600">{property.city}</td>
                                                 <td className="p-4 text-sm font-bold text-slate-900">
                                                     ${property.price.toLocaleString()}
                                                 </td>
                                                 <td className="p-4">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${property.status === 'pending'
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${property.approvalStatus === 'Pending'
                                                         ? 'bg-yellow-100 text-yellow-700 border border-yellow-200/50'
-                                                        : property.status === 'rejected'
+                                                        : property.approvalStatus === 'Rejected'
                                                             ? 'bg-red-100 text-red-700 border border-red-200/50'
                                                             : 'bg-green-100 text-green-700 border border-green-200/50'
                                                         }`}>
-                                                        {property.status === 'pending' ? 'Pending' : property.status === 'rejected' ? 'Rejected' : 'Approved'}
+                                                        {property.approvalStatus === 'Pending' ? 'Pending' : property.approvalStatus === 'Rejected' ? 'Rejected' : 'Approved'}
                                                     </span>
                                                 </td>
                                                 <td className="p-4 text-right">
                                                     <div className="flex items-center justify-end gap-2 text-slate-400">
-                                                        {property.status === 'pending' && (
+                                                        {property.approvalStatus === 'Pending' && (
                                                             <>
                                                                 <button
-                                                                    onClick={() => handleApprove(property.id)}
+                                                                    onClick={() => handleApprove(property.homeId)}
                                                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-semibold transition-colors border border-green-200/50"
                                                                 >
                                                                     <CheckCircle size={16} />
                                                                     Approve
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => handleReject(property.id)}
+                                                                    onClick={() => handleReject(property.homeId)}
                                                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-sm font-semibold transition-colors border border-red-200/50"
                                                                 >
                                                                     <XCircle size={16} />
@@ -358,16 +393,55 @@ const AdminDashboard = () => {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {properties.length === 0 && (
+                                        {properties.length === 0 && !isLoadingProperties && (
                                             <tr>
                                                 <td colSpan="5" className="p-8 text-center text-slate-500">
                                                     No properties found in the system.
                                                 </td>
                                             </tr>
                                         )}
+                                        {isLoadingProperties && (
+                                            <tr>
+                                                <td colSpan="5" className="p-8 text-center text-slate-500">
+                                                    Loading properties...
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
+
+                            {propertiesTotalPages > 1 && (
+                                <div className="flex items-center justify-between bg-slate-50 px-6 py-4 border-t border-slate-100">
+                                    <div className="flex flex-1 items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-slate-700">
+                                                Page <span className="font-semibold">{propertiesPage}</span> of <span className="font-semibold">{propertiesTotalPages}</span>
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                                <button
+                                                    onClick={() => loadProperties(propertiesPage - 1)}
+                                                    disabled={propertiesPage === 1 || isLoadingProperties}
+                                                    className="relative inline-flex items-center rounded-l-md px-3 py-2 text-slate-400 bg-white ring-1 ring-inset ring-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                                                >
+                                                    <span className="sr-only">Previous</span>
+                                                    <span aria-hidden="true" className="text-sm font-medium">&larr; Previous</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => loadProperties(propertiesPage + 1)}
+                                                    disabled={propertiesPage === propertiesTotalPages || isLoadingProperties}
+                                                    className="relative inline-flex items-center rounded-r-md px-3 py-2 text-slate-400 bg-white ring-1 ring-inset ring-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                                                >
+                                                    <span className="sr-only">Next</span>
+                                                    <span aria-hidden="true" className="text-sm font-medium">Next &rarr;</span>
+                                                </button>
+                                            </nav>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </>
                 )}

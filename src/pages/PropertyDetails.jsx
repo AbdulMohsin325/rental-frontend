@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { getAllProperties } from '../services/propertyStore';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getPropertyById } from '../services/propertyStore';
+import { getBookedDatesForProperty, createBookingRequest } from '../services/bookingStore';
 import { MapPin, BedDouble, Bath, SquareFunction, CheckCircle2, Navigation, MessageCircle, Home } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import { addDays, parseISO } from 'date-fns';
 
 const tourSchema = z.object({
     name: z.string().min(2, 'Name is required'),
@@ -16,13 +20,20 @@ const tourSchema = z.object({
 
 const PropertyDetails = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [property, setProperty] = useState(null);
+    const [dateRange, setDateRange] = useState([null, null]);
+    const [startDate, endDate] = dateRange;
+    const [excludeIntervals, setExcludeIntervals] = useState([]);
+    const [isBooking, setIsBooking] = useState(false);
 
     useEffect(() => {
-        const allProperties = getAllProperties();
-        const match = allProperties.find((p) => p.id === Number(id));
-        setProperty(match || null);
+        fetchProperty(id);
+        fetchBookedDates(id);
     }, [id]);
+
+
+
 
     // Scroll to top on load
     useEffect(() => {
@@ -33,14 +44,43 @@ const PropertyDetails = () => {
         resolver: zodResolver(tourSchema),
     });
 
-    const onSubmit = async (data) => {
-        try {
-            await new Promise(resolve => setTimeout(resolve, 800));
-            toast.success('Tour request sent successfully!');
-            reset();
-        } catch (error) {
-            toast.error('Failed to send request. Please try again.');
+
+    const fetchProperty = async (id) => {
+        const res = await getPropertyById(id);
+        if (res.status) {
+            setProperty(res.data);
         }
+    };
+
+    const fetchBookedDates = async (id) => {
+        const res = await getBookedDatesForProperty(id);
+        if (res.status && res.data) {
+            const intervals = res.data.map(booking => ({
+                start: parseISO(booking.startDate),
+                end: parseISO(booking.endDate)
+            }));
+            setExcludeIntervals(intervals);
+        }
+    };
+
+    const handleBookingSubmit = async () => {
+        if (!startDate || !endDate || !property) return;
+
+        setIsBooking(true);
+        const res = await createBookingRequest({
+            houseId: property.homeId || property._id,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        });
+
+        if (res.status) {
+            toast.success('Tour request sent successfully!');
+            setDateRange([null, null]);
+            fetchBookedDates(id); // Refresh disabled dates
+        } else {
+            toast.error(res.message || 'Failed to send request. Please try again or login first.');
+        }
+        setIsBooking(false);
     };
 
     if (!property) return (
@@ -58,7 +98,7 @@ const PropertyDetails = () => {
             {/* Property Hero Image */}
             <div className="w-full h-[50vh] min-h-[400px] relative">
                 <img
-                    src={property.imageUrl}
+                    src={property.thumbnail}
                     alt={property.title}
                     className="w-full h-full object-cover animate-fade-in"
                 />
@@ -135,7 +175,7 @@ const PropertyDetails = () => {
                         <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3">
                             <Navigation size={24} className="text-primary-600" />
                         </div>
-                        <span className="text-lg font-bold text-slate-800 text-center">{property.location.split(',')[0]}</span>
+                        <span className="text-lg font-bold text-slate-800 text-center">{property.address.city}</span>
                         <span className="text-slate-500 text-sm font-medium">Location</span>
                     </div>
                 </div>
@@ -168,57 +208,69 @@ const PropertyDetails = () => {
                                 ))}
                             </div>
                         </section>
+
+                        <section>
+                            <h2 className="text-3xl font-bold text-slate-900 mb-6">Property Gallery</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {(property.images?.length > 0 ? property.images : [property.imageUrl || property.thumbnail].filter(Boolean)).map((img, index) => (
+                                    <div key={index} className="aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                        <img
+                                            src={img}
+                                            alt={`${property.title} view ${index + 1}`}
+                                            className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
                     </div>
 
                     {/* Sidebar */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 sm:p-8 sticky top-24">
-                            <h3 className="text-xl font-bold text-slate-900 mb-6">Schedule a Tour</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-6">Book Your Stay</h3>
 
-                            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                            <div className="space-y-4">
                                 <div>
-                                    <input
-                                        type="text"
-                                        placeholder="Your Name"
-                                        {...register('name')}
-                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.name ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Select Dates</label>
+                                    <DatePicker
+                                        selectsRange={true}
+                                        startDate={startDate}
+                                        endDate={endDate}
+                                        onChange={(update) => {
+                                            setDateRange(update);
+                                        }}
+                                        minDate={new Date()}
+                                        excludeDateIntervals={excludeIntervals}
+                                        monthsShown={1}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer text-slate-700"
+                                        placeholderText="Add dates"
+                                        dateFormat="MMM d, yyyy"
+                                        isClearable
                                     />
-                                    {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
                                 </div>
-                                <div>
-                                    <input
-                                        type="email"
-                                        placeholder="Email Address"
-                                        {...register('email')}
-                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.email ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
-                                    />
-                                    {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
-                                </div>
-                                <div>
-                                    <input
-                                        type="tel"
-                                        placeholder="Phone Number"
-                                        {...register('phone')}
-                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors.phone ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
-                                    />
-                                    {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
-                                </div>
-                                <div>
-                                    <textarea
-                                        rows="4"
-                                        placeholder="I'm interested in..."
-                                        {...register('message')}
-                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none ${errors.message ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}></textarea>
-                                    {errors.message && <p className="mt-1 text-xs text-red-600">{errors.message.message}</p>}
-                                </div>
+
+                                {startDate && endDate && (
+                                    <div className="bg-slate-50 p-4 rounded-xl space-y-3 mt-6 border border-slate-100">
+                                        <div className="flex justify-between text-slate-600">
+                                            <span>${property.price.toLocaleString()} x {Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))} nights</span>
+                                            <span>${(property.price * Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))).toLocaleString()}</span>
+                                        </div>
+                                        <div className="h-px bg-slate-200 w-full my-2"></div>
+                                        <div className="flex justify-between font-bold text-slate-900 text-lg">
+                                            <span>Total</span>
+                                            <span>${(property.price * Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition-all duration-300 shadow-lg mt-4 disabled:opacity-70 disabled:cursor-not-allowed">
-                                    {isSubmitting ? 'Sending Request...' : 'Request Information'}
+                                    onClick={handleBookingSubmit}
+                                    disabled={isBooking || !startDate || !endDate}
+                                    className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-all duration-300 shadow-lg mt-6 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2">
+                                    {isBooking ? 'Processing...' : 'Request to Book'}
                                 </button>
-                            </form>
+                            </div>
                         </div>
                     </div>
 

@@ -6,14 +6,70 @@ import { getIsAuthenticated, getMe } from '../services/auth';
 
 const LandingPage = () => {
     const [approvedProperties, setApprovedProperties] = useState([]);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeSearch, setActiveSearch] = useState('');
+
     useEffect(() => {
         if (!getIsAuthenticated()) return;
         getMe().catch(() => { });
     }, []);
 
+    const fetchProperties = async (pageNum, isLoadMore = false, searchParam = activeSearch) => {
+        setIsLoading(true);
+        const res = await getApprovedProperties(pageNum, 9, searchParam);
+        if (res.status && res.data) {
+            const mappedProperties = res.data.map(p => ({
+                ...p,
+                id: p.homeId || p._id,
+                location: p.city || p.address?.city || p.address?.street || 'Location not specified',
+                imageUrl: p.thumbnail || p.images?.[0] || '',
+                featured: false // Add featured logic here if available in backend
+            }));
+
+            if (isLoadMore) {
+                setApprovedProperties(prev => [...prev, ...mappedProperties]);
+            } else {
+                setApprovedProperties(mappedProperties);
+            }
+
+            setTotalPages(res.totalPages || Math.ceil((res.total || 0) / 9));
+        } else if (!isLoadMore) {
+            setApprovedProperties([]);
+            setTotalPages(1);
+        }
+        setIsLoading(false);
+    };
+
     useEffect(() => {
-        setApprovedProperties(getApprovedProperties());
+        fetchProperties(1, false, '');
     }, []);
+
+    const handleSearch = () => {
+        setActiveSearch(searchQuery);
+        setPage(1);
+        fetchProperties(1, false, searchQuery);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+            window.scrollTo({
+                top: document.getElementById('properties-section')?.offsetTop - 80,
+                behavior: 'smooth'
+            });
+        }
+    };
+
+    const handleLoadMore = () => {
+        if (page < totalPages) {
+            const nextPage = page + 1;
+            setPage(nextPage);
+            fetchProperties(nextPage, true, activeSearch);
+        }
+    };
 
     const featured = approvedProperties.filter(p => p.featured);
 
@@ -45,11 +101,23 @@ const LandingPage = () => {
                             <input
                                 type="text"
                                 placeholder="Search by location or neighborhood..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={handleKeyDown}
                                 className="bg-transparent border-none outline-none text-white w-full placeholder:text-white/60 focus:ring-0"
                             />
                         </div>
 
-                        <button className="bg-primary-500 hover:bg-primary-600 text-white px-8 py-3 rounded-full font-semibold transition-all duration-300 w-full sm:w-auto flex items-center justify-center gap-2 shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50">
+                        <button
+                            onClick={() => {
+                                handleSearch();
+                                window.scrollTo({
+                                    top: document.getElementById('properties-section')?.offsetTop - 80,
+                                    behavior: 'smooth'
+                                });
+                            }}
+                            className="bg-primary-500 hover:bg-primary-600 text-white px-8 py-3 rounded-full font-semibold transition-all duration-300 w-full sm:w-auto flex items-center justify-center gap-2 shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50"
+                        >
                             <Search size={18} />
                             <span>Search Properties</span>
                         </button>
@@ -79,10 +147,12 @@ const LandingPage = () => {
             </section>
 
             {/* All Properties */}
-            <section className="py-20 bg-white">
+            <section id="properties-section" className="py-20 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="mb-12">
-                        <h2 className="text-3xl font-bold text-slate-900 mb-2">Explore All Properties</h2>
+                        <h2 className="text-3xl font-bold text-slate-900 mb-2">
+                            {activeSearch ? `Search Results for "${activeSearch}"` : 'Explore All Properties'}
+                        </h2>
                         <div className="w-20 h-1 bg-primary-500 rounded-full"></div>
                     </div>
 
@@ -93,9 +163,15 @@ const LandingPage = () => {
                     </div>
 
                     <div className="mt-16 text-center">
-                        <button className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-700 font-semibold rounded-full hover:border-primary-500 hover:text-primary-600 transition-all duration-300 shadow-sm hover:shadow-lg">
-                            Load More Properties
-                        </button>
+                        {page < totalPages && (
+                            <button
+                                onClick={handleLoadMore}
+                                disabled={isLoading}
+                                className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-700 font-semibold rounded-full hover:border-primary-500 hover:text-primary-600 transition-all duration-300 shadow-sm hover:shadow-lg disabled:opacity-50"
+                            >
+                                {isLoading ? 'Loading...' : 'Load More Properties'}
+                            </button>
+                        )}
                     </div>
                 </div>
             </section>

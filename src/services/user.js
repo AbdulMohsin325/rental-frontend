@@ -1,6 +1,5 @@
 
 import axios from 'axios'
-import { logoutUser } from './auth'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_SERVICE
 
@@ -20,9 +19,6 @@ export const updateMe = async (doc) => {
     const { data, message } = response.data
     return { status: true, data: normalizeUser(data), message }
   } catch (error) {
-    if (error?.response?.status === 401) {
-      logoutUser()
-    }
     throw new Error(error?.message || 'Failed to update profile.')
   }
 }
@@ -37,9 +33,6 @@ export const fetchAllUsers = async () => {
     const data = payload?.data ?? payload
     return { status: true, data: Array.isArray(data) ? data.map(normalizeUser) : [], message: payload?.message || 'Success' }
   } catch (error) {
-    if (error?.response?.status === 401) {
-      logoutUser()
-    }
     throw new Error(error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Failed to load users.')
   }
 }
@@ -54,9 +47,6 @@ export const fetchAdminUsers = async () => {
     const data = payload?.data ?? payload
     return { status: true, data: Array.isArray(data) ? data.map(normalizeUser) : [], message: payload?.message || 'Success' }
   } catch (error) {
-    if (error?.response?.status === 401) {
-      logoutUser()
-    }
     throw new Error(error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Failed to load admin users.')
   }
 }
@@ -72,9 +62,6 @@ export const createAdminUser = async (doc) => {
     const data = payload?.data ?? payload
     return { status: true, data: normalizeUser(data), message: payload?.message || 'Success' }
   } catch (error) {
-    if (error?.response?.status === 401) {
-      logoutUser()
-    }
     throw new Error(error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Failed to create admin user.')
   }
 }
@@ -89,9 +76,6 @@ export const updateUserById = async (id, doc) => {
     const data = payload?.data ?? payload
     return { status: true, data: normalizeUser(data), message: payload?.message || 'Success' }
   } catch (error) {
-    if (error?.response?.status === 401) {
-      logoutUser()
-    }
     throw new Error(error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Failed to update user.')
   }
 }

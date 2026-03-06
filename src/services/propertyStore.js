@@ -1,12 +1,22 @@
 import axios from 'axios';
 
-export const getAllProperties = async () => {
+const authHeader = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+});
+
+export const getAllProperties = async (page = 1, limit = 10, search = '') => {
     try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/list`)
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/list`, {
+            params: { page, limit, search },
+            ...authHeader()
+        })
         if (response.data.status == 1) {
             return ({
                 status: true,
                 data: response.data.data,
+                page: response.data.page,
+                totalPages: response.data.totalPages,
+                total: response.data.total,
                 message: response.data.message || "Properties fetched successfully"
             })
         }
@@ -26,34 +36,99 @@ export const getAllProperties = async () => {
     }
 };
 
-
-export const getApprovedProperties = () => {
-    return store.filter(p => p.status === 'approved');
+export const getProperties = async (page = 1, limit = 10, search = '') => {
+    try {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/admin`, {
+            params: { page, limit, search },
+            ...authHeader()
+        })
+        if (response.data.status == 1) {
+            return ({
+                status: true,
+                data: response.data.data,
+                page: response.data.page,
+                totalPages: response.data.totalPages,
+                total: response.data.total,
+                message: response.data.message || "Properties fetched successfully"
+            })
+        }
+        return ({
+            status: false,
+            data: [],
+            message: response.data.message || "Failed to fetch properties"
+        })
+    }
+    catch (error) {
+        console.error("Error fetching properties:", error);
+        return ({
+            status: false,
+            data: [],
+            message: error.message || "Error fetching properties"
+        })
+    }
 };
 
+export const getApprovedProperties = async (page = 1, limit = 9, search = '') => {
+    try {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/`, {
+            params: { page, limit, search }
+        })
+        if (response.data.status === 1 || response.data.status === true) {
+            return ({
+                status: true,
+                data: response.data.data,
+                page: response.data.page,
+                totalPages: response.data.totalPages,
+                total: response.data.total,
+                message: response.data.message || "Approved properties fetched successfully"
+            })
+        }
+        else {
+            return ({
+                status: false,
+                data: [],
+                message: response.data.message || "Failed to fetch approved properties"
+            })
+        }
+    } catch (error) {
+        console.error("Error fetching approved properties:", error);
+        return ({
+            status: false,
+            data: [],
+            message: error.message || "Error fetching approved properties"
+        })
+    }
+}
 
-// export const addProperty = (propertyData) => {
-//     const newProperty = {
-//         ...propertyData,
-//         id: Date.now(), // simple unique id
-//         featured: false,
-//         status: 'pending' // new properties need admin approval
-//     };
-//     store = [newProperty, ...store];
-//     return newProperty;
-// };
+export const updatePropertyStatus = async (id, newStatus) => {
+    try {
+        const formatStatus = newStatus.charAt(0).toUpperCase() + newStatus.slice(1).toLowerCase();
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/${id}/status`, { status: formatStatus }, authHeader());
 
-export const updatePropertyStatus = (id, newStatus) => {
-    store = store.map(p =>
-        p.id === id ? { ...p, status: newStatus } : p
-    );
+        if (response.data.status === 1 || response.data.status === true) {
+            return {
+                status: true,
+                data: response.data.data,
+                message: response.data.message || `Property ${formatStatus.toLowerCase()} successfully`
+            };
+        } else {
+            return {
+                status: false,
+                message: response.data.message || `Failed to update property to ${formatStatus}`
+            };
+        }
+    } catch (error) {
+        console.error("Error updating property status:", error);
+        return {
+            status: false,
+            message: error.response?.data?.message || "Error updating property status"
+        };
+    }
 };
-
-
 
 export const addProperty = async (propertyData) => {
     try {
-        const response = await axios.post(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/add`, propertyData)
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/add`, propertyData, authHeader())
         if (response.data.status === 1 || response.data.status === true) {
             return ({
                 status: true,
@@ -97,7 +172,7 @@ export const getPropertyById = async (id) => {
 
 export const updateProperty = async (id, propertyData) => {
     try {
-        const response = await axios.put(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/${id}`, propertyData)
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/${id}`, propertyData, authHeader())
         if (response.data.status === 1 || response.data.status === true) {
             return ({
                 status: true,
@@ -113,6 +188,28 @@ export const updateProperty = async (id, propertyData) => {
         }
     } catch (error) {
         console.error("Error updating property:", error);
+        throw error;
+    }
+}
+
+export const updatePropertyActiveStatus = async (id, isActive) => {
+    try {
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_SERVICE}/houses/${id}/active`, { isActive }, authHeader())
+        if (response.data.status === 1 || response.data.status === true) {
+            return ({
+                status: true,
+                data: response.data.data,
+                message: response.data.message || "Property status updated successfully"
+            })
+        }
+        else {
+            return ({
+                status: false,
+                message: response.data.message || "Failed to update property status"
+            })
+        }
+    } catch (error) {
+        console.error("Error updating property status:", error);
         throw error;
     }
 }

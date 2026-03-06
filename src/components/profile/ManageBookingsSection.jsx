@@ -16,8 +16,10 @@ const ManageBookingsSection = () => {
 
     const loadData = async () => {
         try {
-            // Assume ownerId = 1 for the mock agent
-            setBookings(getReceivedBookings(1));
+            let res = await getReceivedBookings();
+            if (res?.status && Array.isArray(res.data)) {
+                setBookings(res.data);
+            }
 
             const response = await getAllProperties();
             if (response?.status && Array.isArray(response.data)) {
@@ -139,7 +141,7 @@ const ManageBookingsSection = () => {
                             if (!property) return null;
 
                             return (
-                                <div key={booking.id} className="flex flex-col lg:flex-row gap-6 p-5 border border-slate-100 rounded-2xl hover:shadow-md transition-shadow duration-300 bg-white group">
+                                <div key={booking.bookingId} className="flex flex-col lg:flex-row gap-6 p-5 border border-slate-100 rounded-2xl hover:shadow-md transition-shadow duration-300 bg-white group">
 
                                     {/* Property Image */}
                                     <div className="w-full lg:w-64 h-48 lg:h-auto shrink-0 relative rounded-xl overflow-hidden bg-slate-100">
@@ -199,14 +201,14 @@ const ManageBookingsSection = () => {
                                             {booking.status === 'pending' && (
                                                 <div className="flex gap-2">
                                                     <button
-                                                        onClick={() => handleAcceptBooking(booking.id)}
+                                                        onClick={() => handleAcceptBooking(booking.bookingId)}
                                                         className="inline-flex items-center px-4 py-2 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-sm"
                                                     >
                                                         <CircleCheck size={16} className="mr-2" />
                                                         Accept
                                                     </button>
                                                     <button
-                                                        onClick={() => handleRejectBooking(booking.id)}
+                                                        onClick={() => handleRejectBooking(booking.bookingId)}
                                                         className="inline-flex items-center px-4 py-2 text-sm font-semibold rounded-lg text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors border border-rose-200"
                                                     >
                                                         <Ban size={16} className="mr-2" />
